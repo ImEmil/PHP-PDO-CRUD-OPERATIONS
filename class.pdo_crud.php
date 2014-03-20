@@ -1,18 +1,24 @@
 <?php
 class PDO_CRUD
 {
+	/*
+	*
+	*	PHP >= 5.4.0 IS REQUIRED
+	*
+	*/
+
 	public $s;				// The database connection that we set in the constructor [pdo]
 	public $_query  = null;	// Where we store the query(s)
 	public $pdo 	= null; // The database settings [ini]
-	public $params  = array();
-
+	public $params  = [];
+	
 	public function __construct($ini_file)
-	{ 			
+	{ 
 		try
 		{
 			$this->pdo = parse_ini_file($ini_file);
-			$c 		   = array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION);
-			$this->s   = new PDO("mysql:host={$this->pdo['host']};dbname={$this->pdo['dbname']}", $this->pdo['user'], $this->pdo['pass'], $c);
+			$_pdoAttr  = array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION);
+			$this->s   = new PDO("mysql:host={$this->pdo['host']};dbname={$this->pdo['dbname']}", $this->pdo['user'], $this->pdo['pass'], $_pdoAttr);
 		}
 		catch (PDOException $e)
 		{
@@ -23,9 +29,9 @@ class PDO_CRUD
 	public function __destruct()
  	{
  		$this->s = null;
-	}
-
- 	public function antiXSS($str)
+ 	}
+	
+	public function antiXSS($str)
 	{
 		$filtered = null;
 
@@ -46,7 +52,7 @@ class PDO_CRUD
 	public function _init($query, $params)
 	{
 		try {
-			// Lets prepare our query :)
+			// Lets prepare our query
 			$this->_query = $this->s->prepare($query);
 
 			// Add's the params to our $params array
@@ -63,58 +69,34 @@ class PDO_CRUD
 			}
 
 			// Lets run the query
-			$this->run = $this->_query->execute();		
+			$this->_query->execute();		
 		}
 		catch(PDOException $e)
 		{
+			// Oh snap, something went wrong!
 			exit($e->getMessage());
 		}
 
-		$this->params = array();	// Resets the params
-		return $this;
-	}
-
-	public function bind($prm, $val)
-	{	
-		$this->params[sizeof($this->params)] = ":" . $prm . "\_NEW" . $val;
-		return $this;
-	}
-
-
-	public function bindAll($val)
-	{
-		if(empty($this->params) && is_array($val))
-		{
-			$columns = array_keys($val);
-			
-			foreach($columns as $exc => &$column)
-			{
-				$this->bind($column, $val[$column]);
-			}
-		}
+		$this->params = [];	// Resets the params
 		return $this;
 	}
 	
 	public function query($query, $params = null, $Fmode = PDO::FETCH_ASSOC)
 	{
 		$query = trim($query);
-
 		$this->_init($query, $params);
-
-		$stat = strtolower(substr($query, 0 , 6));
-
+		$stat  = strtolower(substr($query, 0 , 6));
+		
 		switch($stat)
 		{
 			case 'select':
 				return $this->_query->fetchAll($Fmode);
 			break;
-
 			case 'insert':
 			case 'update':
 			case 'delete':
 				return $this->_query->rowCount();
 			break;
-			
 			default:
 				return null;
 			break;
@@ -123,22 +105,45 @@ class PDO_CRUD
 
 	public function column($query, $params = null)
 	{
-		$this->_init($query, $params);
-		$columns = $this->_query->fetchAll(PDO::FETCH_NUM);		
-
+		$columns = $this->_init($query, $params)->_query->fetchAll(PDO::FETCH_NUM);		
 		$column = null;
 
-			foreach($columns as $cols) {
-				$column[] = $cols[0];
+		foreach($columns as $cols)
+		{
+			$column[] = $cols[0];
+		}
+
+		return $column;
+	}
+
+	public function bindAll($val)
+	{
+		if(empty($this->params) && is_array($val))
+		{
+			$columns = array_keys($val);
+			
+			foreach($columns as $exc => &$col)
+			{
+				$this->bind($col, $val[$col]);
 			}
+		}
+		return $this;
+	}
 
-			return $column;
+	public function bind($prm, $val)
+	{	
+		$this->params[sizeof($this->params)] = ":" . $prm . "\_NEW" . $val;	// sizeof() == count()
+		return $this;
+	}
 
+	public function count($query, $params = null)
+	{
+		return intval($this->_init($query, $params)->_query->fetchColumn());
 	}
 
 	public function lastInsertId()
 	{
-		return $this->s->lastInsertId();
+		return intval($this->s->lastInsertId());
 	}
 
 	public function row($query, $params = null, $Fmode = PDO::FETCH_ASSOC)
