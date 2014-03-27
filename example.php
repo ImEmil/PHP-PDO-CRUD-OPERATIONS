@@ -40,13 +40,17 @@
 */
 
 # Insert
-$insert   =  $db->query("INSERT INTO users (username,rank) VALUES(:name, :rank)", ["name" => "Emil", "rank" => "1"] );
+$db->bind("name", "Emil");
+$db->bind("rank", "1");
+$insert   =  $db->query("INSERT INTO users (username,rank) VALUES(:name, :rank)");
 
 # Update
+$db->bindAll( ["newRank" => "2", "name" => "Emil"] );
 $update   =  $db->query("UPDATE users SET rank = :newRank WHERE username = :name", ["newRank" => "2", "name" => "Emil"] );
 
 # Delete
-$delete   =  $db->query("DELETE FROM users WHERE username = :name", ["name" => "Emil"] );
+$name     = ["name" => "Emil"];
+$delete   =  $db->query("DELETE FROM users WHERE username = :name", $name);
 
 /*
 * #Rows & columns
