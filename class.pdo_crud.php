@@ -1,13 +1,19 @@
 <?php
-class PDO_CRUD
-{
 	/*
 	*
 	*	PHP >= 5.4.0 IS REQUIRED
 	*
 	*/
+interface CRUD {
+	const charset = 'utf-8';
+	public function _init($query, $params);
+	public function query($query, $params, $Fmode);
+	public function bind($prm, $val);
+}
 
-	public $s;				// The database connection that we set in the constructor [pdo]
+class PDO_CRUD extends PDO implements CRUD
+{
+	protected $s;	// The database connection that we set in the constructor [pdo]
 	public $_query  = null;	// Where we store the query(s)
 	public $pdo 	= null; // The database settings [ini]
 	public $params  = [];
@@ -18,7 +24,7 @@ class PDO_CRUD
 		{
 			$this->pdo = parse_ini_file($ini_file);
 			$_pdoAttr  = array(PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION);
-			$this->s   = new PDO("mysql:host={$this->pdo['host']};dbname={$this->pdo['dbname']}", $this->pdo['user'], $this->pdo['pass'], $_pdoAttr);
+			$this->s   = new PDO("{$this->pdo['driver'][1]}:host={$this->pdo['host']};dbname={$this->pdo['dbname']}", $this->pdo['user'], $this->pdo['pass'], $_pdoAttr);
 		}
 		catch (PDOException $e)
 		{
@@ -39,12 +45,12 @@ class PDO_CRUD
 		{
 			foreach($str as $val)
 			{
-				$filtered .= trim(strip_tags(htmlspecialchars($val, ENT_QUOTES, 'utf-8')));
+				$filtered .= trim(strip_tags(htmlspecialchars($val, ENT_QUOTES, CRUD::charset)));
 			}
 		}
 		else
 		{
-			$filtered = trim(strip_tags(htmlspecialchars($str, ENT_QUOTES, 'utf-8')));
+			$filtered = trim(strip_tags(htmlspecialchars($str, ENT_QUOTES, CRUD::charset)));
 		}
 		return $filtered;
 	}
@@ -53,13 +59,13 @@ class PDO_CRUD
 	{
 		try {
 			// Lets prepare our query
-			$this->_query = $this->s->prepare($query);
+			$this->_query = $this->s->prepare($this->antiXSS($query));
 
 			// Add's the params to our $params array
 			$this->bindAll($params);
 
 			// Now we bind the params
-			if(!empty($this->params))
+			if(!$this->params === NULL)
 			{
 				foreach($this->params as $p)
 				{
