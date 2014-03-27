@@ -1,8 +1,9 @@
 <?php
   require_once("path/class.pdo_crud.php");
   $db = new PDO_CRUD("config.ini.php"); // Instance with the config file [Db connections, drivers]
-
-
+  
+// ["Test" => "o", "tt" => "de"] Are the same as array("Test" => "o", "tt" => "de")
+# REQUIRES PHP >= 5.4.0
 /*
 * #Fetch from table
 */
